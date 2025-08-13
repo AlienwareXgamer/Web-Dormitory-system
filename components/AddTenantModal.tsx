@@ -27,15 +27,24 @@ export const AddTenantModal = ({ availableRooms, onClose, onSubmit }) => {
   const [name, setName] = useState('');
   const [rent, setRent] = useState('');
   const [roomId, setRoomId] = useState(availableRooms[0]?.id || '');
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     if (!name || !rent || !roomId || parseFloat(rent) <= 0) {
       alert('Please fill all fields correctly.');
       return;
     }
-    onSubmit(Number(roomId), name, parseFloat(rent));
-    onClose();
+    setIsSubmitting(true);
+    try {
+        await onSubmit(Number(roomId), name, parseFloat(rent));
+        onClose();
+    } catch (error) {
+        console.error("Failed to add tenant:", error);
+        alert('An error occurred while adding the tenant. Please try again.');
+    } finally {
+        setIsSubmitting(false);
+    }
   };
 
   return (
@@ -63,23 +72,25 @@ export const AddTenantModal = ({ availableRooms, onClose, onSubmit }) => {
               onChange={(e) => setName(e.target.value)}
               placeholder="e.g., Jane Doe"
               required
+              disabled={isSubmitting}
             />
           </div>
           <div className="form-group">
-            <label htmlFor="rent-amount">Monthly Rent ($)</label>
+            <label htmlFor="rent-amount">Monthly Rent (₱)</label>
             <input
               id="rent-amount"
               type="number"
               value={rent}
               onChange={(e) => setRent(e.target.value)}
-              placeholder="e.g., 500"
+              placeholder="e.g., 10000"
               required
               min="1"
+              disabled={isSubmitting}
             />
           </div>
           <div className="form-group">
             <label htmlFor="room-select">Select Room</label>
-            <select id="room-select" value={roomId} onChange={(e) => setRoomId(e.target.value)} required>
+            <select id="room-select" value={roomId} onChange={(e) => setRoomId(e.target.value)} required disabled={isSubmitting}>
               {availableRooms.map((room) => (
                 <option key={room.id} value={room.id}>
                   Room {room.id} ({room.tenants.length}/{MAX_TENANTS_PER_ROOM})
@@ -94,6 +105,7 @@ export const AddTenantModal = ({ availableRooms, onClose, onSubmit }) => {
               onClick={onClose}
               whileHover={{ scale: 1.05 }}
               whileTap={{ scale: 0.95 }}
+              disabled={isSubmitting}
             >
               Cancel
             </motion.button>
@@ -102,8 +114,9 @@ export const AddTenantModal = ({ availableRooms, onClose, onSubmit }) => {
               className="btn-primary"
               whileHover={{ scale: 1.05 }}
               whileTap={{ scale: 0.95 }}
+              disabled={isSubmitting}
             >
-              Add Tenant
+              {isSubmitting ? 'Adding...' : 'Add Tenant'}
             </motion.button>
           </div>
         </form>

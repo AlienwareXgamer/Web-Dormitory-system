@@ -5,6 +5,7 @@
 import { motion } from 'framer-motion';
 import { MAX_TENANTS_PER_ROOM } from '../constants';
 import type { Room } from '../types';
+import { TrashIcon } from './icons';
 
 interface RoomCardProps {
     room: Room;
@@ -29,7 +30,7 @@ export const RoomCard = ({ room, onRemoveTenant, onToggleBilling }: RoomCardProp
             <div key={tenant.id} className="tenant-info">
               <div className="tenant-details">
                 <span className="tenant-name">{tenant.name}</span>
-                <span className="tenant-rent">Rent: ${tenant.rent}/mo</span>
+                <span className="tenant-rent">Rent: ₱{tenant.rent.toLocaleString()}/mo</span>
                 <span className={`billing-status billing-${tenant.billingStatus.toLowerCase()}`}>
                   {tenant.billingStatus}
                 </span>
@@ -48,10 +49,10 @@ export const RoomCard = ({ room, onRemoveTenant, onToggleBilling }: RoomCardProp
                     onClick={() => onRemoveTenant(room.id, tenant.id)}
                     className="btn-remove"
                     aria-label={`Remove ${tenant.name}`}
-                    whileHover={{ scale: 1.2, color: 'var(--error-color)' }}
+                    whileHover={{ scale: 1.1, color: 'var(--error-color)', backgroundColor: 'rgba(248, 81, 73, 0.1)' }}
                     whileTap={{ scale: 0.9 }}
                  >
-                    &times;
+                    <TrashIcon />
                  </motion.button>
               </div>
             </div>

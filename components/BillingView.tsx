@@ -10,61 +10,78 @@ interface BillingViewProps {
     onToggleBilling: (roomId: number, tenantId: string) => void;
 }
 
-const listItemVariants: Variants = {
-    hidden: { y: 20, opacity: 0 },
-    visible: { 
-        y: 0, 
+const tableRowVariants: Variants = {
+    hidden: { opacity: 0, y: 10 },
+    visible: (i: number) => ({
         opacity: 1,
-        transition: { type: 'spring', stiffness: 350, damping: 25 }
-    },
-    exit: { opacity: 0, scale: 0.9, transition: { duration: 0.2 } }
+        y: 0,
+        transition: {
+            delay: i * 0.03,
+            type: 'spring',
+            stiffness: 400,
+            damping: 30
+        }
+    }),
+    exit: { opacity: 0, x: -30, transition: { duration: 0.2 } }
 };
 
 
 export const BillingView = ({ tenants, onToggleBilling }: BillingViewProps) => {
     return (
-        <div className="billing-view">
+        <div className="content-view">
             <h2>All Tenant Billings</h2>
             {tenants.length === 0 ? (
                  <p className="no-tenants">No tenants to display.</p>
             ) : (
-                <motion.ul 
-                    className="billing-list"
-                    variants={{ visible: { transition: { staggerChildren: 0.05 } } }}
-                    initial="hidden"
-                    animate="visible"
-                >
-                    <AnimatePresence>
-                        {tenants.map(tenant => (
-                            <motion.li 
-                                key={tenant.id}
-                                className="billing-item"
-                                variants={listItemVariants}
-                                layout
-                            >
-                                <div className="billing-item-details">
-                                    <span className="tenant-name">{tenant.name}</span>
-                                    <span className="tenant-room">Room {tenant.roomId}</span>
-                                    <span className="tenant-rent">Rent: ${tenant.rent}/mo</span>
-                                </div>
-                                 <div className="billing-item-status">
-                                     <span className={`billing-status billing-${tenant.billingStatus.toLowerCase()}`}>
-                                      {tenant.billingStatus}
-                                    </span>
-                                     <motion.button
-                                        onClick={() => onToggleBilling(tenant.roomId, tenant.id)}
-                                        className="btn-billing"
-                                        aria-label={`Mark bill as ${tenant.billingStatus === 'Due' ? 'Paid' : 'Due'} for ${tenant.name}`}
-                                        whileHover={{ scale: 1.05 }}
-                                        whileTap={{ scale: 0.95 }}
-                                     >
-                                        Toggle Bill
-                                     </motion.button>
-                                 </div>
-                            </motion.li>
-                        ))}
-                    </AnimatePresence>
-                </motion.ul>
+                <div className="table-container">
+                    <motion.table 
+                        className="billing-table"
+                        initial="hidden"
+                        animate="visible"
+                    >
+                        <thead>
+                            <tr>
+                                <th>Tenant Name</th>
+                                <th>Room</th>
+                                <th>Monthly Rent</th>
+                                <th>Status</th>
+                                <th>Action</th>
+                            </tr>
+                        </thead>
+                        <AnimatePresence>
+                            <tbody>
+                                {tenants.sort((a, b) => a.name.localeCompare(b.name)).map((tenant, index) => (
+                                    <motion.tr 
+                                        key={tenant.id}
+                                        custom={index}
+                                        variants={tableRowVariants}
+                                        layout
+                                    >
+                                        <td className="tenant-name-cell">{tenant.name}</td>
+                                        <td>Room {tenant.roomId}</td>
+                                        <td>₱{tenant.rent.toLocaleString()}</td>
+                                        <td>
+                                            <span className={`billing-status-badge status-${tenant.billingStatus.toLowerCase()}`}>
+                                                {tenant.billingStatus}
+                                            </span>
+                                        </td>
+                                        <td>
+                                            <motion.button
+                                                onClick={() => onToggleBilling(tenant.roomId, tenant.id)}
+                                                className="btn-billing"
+                                                aria-label={`Mark bill as ${tenant.billingStatus === 'Due' ? 'Paid' : 'Due'} for ${tenant.name}`}
+                                                whileHover={{ scale: 1.05 }}
+                                                whileTap={{ scale: 0.95 }}
+                                            >
+                                                Toggle Bill
+                                            </motion.button>
+                                        </td>
+                                    </motion.tr>
+                                ))}
+                            </tbody>
+                        </AnimatePresence>
+                    </motion.table>
+                </div>
             )}
         </div>
     );

@@ -2,7 +2,7 @@
  * @license
  * SPDX-License-Identifier: Apache-2.0
  */
-import { useState, useMemo, useCallback } from 'react';
+import { useState, useMemo } from 'react';
 import { motion, AnimatePresence, Variants } from 'framer-motion';
 import { generateReportAPI } from '../api/gemini';
 import { AddTenantModal } from './AddTenantModal';
@@ -12,8 +12,13 @@ import { Dashboard } from './Dashboard';
 import { MaintenanceView } from './MaintenanceView';
 import { Navigation } from './Navigation';
 import { RoomCard } from './RoomCard';
+import { AnnouncementsView } from './AnnouncementsView';
+import { AuditLogView } from './AuditLogView';
+import { ThemeToggle } from './ThemeToggle';
 import { TOTAL_ROOMS, MAX_TENANTS_PER_ROOM } from '../constants';
-import type { Room, Tenant, View, MaintenanceRequest, MaintenanceStatus } from '../types';
+import type { Room, Tenant, View, MaintenanceRequest, Announcement, AuditLog } from '../types';
+import { DocumentChartBarIcon, UserPlusIcon, WrenchScrewdriverIcon, ArrowRightOnRectangleIcon, BellAlertIcon } from './icons';
+
 
 const listContainerVariants = {
   hidden: { opacity: 0 },
@@ -49,12 +54,18 @@ export const AdminView = ({
     rooms,
     maintenanceRequests,
     allTenants,
+    announcements,
+    auditLogs,
     onAddTenant,
     onRemoveTenant,
     onToggleBilling,
     onAddRequest,
-    onUpdateStatus,
-    onLogout
+    onUpdateRequest,
+    onAddAnnouncement,
+    onDeleteAnnouncement,
+    onLogout,
+    theme,
+    onThemeToggle
 }) => {
   const [showAddTenantModal, setShowAddTenantModal] = useState(false);
   const [showAddRequestModal, setShowAddRequestModal] = useState(false);
@@ -120,7 +131,7 @@ export const AdminView = ({
                         key={room.id}
                         variants={listItemVariants}
                         layout
-                        whileHover={{ y: -5, boxShadow: '0 8px 24px rgba(0,0,0,0.3)' }}
+                        whileHover={{ y: -5, boxShadow: 'var(--shadow-large)' }}
                         transition={{ type: 'spring', stiffness: 300, damping: 20 }}
                       >
                           <RoomCard
@@ -136,7 +147,11 @@ export const AdminView = ({
         case 'billing':
             return <BillingView tenants={allTenants} onToggleBilling={onToggleBilling} />;
         case 'maintenance':
-            return <MaintenanceView requests={maintenanceRequests} tenants={allTenants} onUpdateStatus={onUpdateStatus} />;
+            return <MaintenanceView requests={maintenanceRequests} onUpdateRequest={onUpdateRequest} />;
+        case 'announcements':
+            return <AnnouncementsView announcements={announcements} onAdd={onAddAnnouncement} onDelete={onDeleteAnnouncement} />;
+        case 'audit':
+            return <AuditLogView logs={auditLogs} />;
         default:
             return null;
     }
@@ -145,13 +160,14 @@ export const AdminView = ({
   return (
     <>
       <header>
-        <h1>Admin Portal</h1>
+        <h1>DMS Admin</h1>
         <motion.div
           className="header-actions"
           variants={headerActionsVariants}
           initial="hidden"
           animate="visible"
         >
+           <ThemeToggle theme={theme} onToggle={onThemeToggle} />
            <motion.button
             variants={headerButtonVariant}
             whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}
@@ -159,7 +175,7 @@ export const AdminView = ({
             className="btn-secondary"
             aria-label="Report a new maintenance issue"
           >
-            <span aria-hidden="true">🛠️</span> Report Issue
+            <BellAlertIcon /> Report Issue
           </motion.button>
           <motion.button
             variants={headerButtonVariant}
@@ -169,7 +185,7 @@ export const AdminView = ({
             className="btn-primary"
             aria-label="Add new tenant"
           >
-            <span aria-hidden="true">＋</span> Add Tenant
+            <UserPlusIcon/> Add Tenant
           </motion.button>
           <motion.button
             variants={headerButtonVariant}
@@ -179,7 +195,7 @@ export const AdminView = ({
             className="btn-secondary"
             aria-label="Generate monthly report"
           >
-            <span aria-hidden="true">📄</span> {isGeneratingReport ? 'Generating...' : 'Generate Report'}
+            <DocumentChartBarIcon/> {isGeneratingReport ? 'Generating...' : 'Generate Report'}
           </motion.button>
           <motion.button
             variants={headerButtonVariant}
@@ -188,7 +204,7 @@ export const AdminView = ({
             className="btn-logout"
             aria-label="Logout"
           >
-            Logout
+            <ArrowRightOnRectangleIcon/> Logout
           </motion.button>
         </motion.div>
       </header>
@@ -203,7 +219,6 @@ export const AdminView = ({
                     animate={{ opacity: 1, y: 0 }}
                     exit={{ opacity: 0, y: -15 }}
                     transition={{ duration: 0.3, ease: [0.4, 0, 0.2, 1] }}
-                    layout
                 >
                     {mainContent()}
                 </motion.div>
@@ -228,7 +243,7 @@ export const AdminView = ({
                         animate={{ opacity: 1, y: 0 }}
                     >
                         {report}
-                    </motion.pre>
+                    </pre>
                 )}
             </AnimatePresence>
             

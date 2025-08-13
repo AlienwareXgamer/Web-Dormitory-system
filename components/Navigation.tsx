@@ -4,29 +4,31 @@
  */
 import { motion } from 'framer-motion';
 import type { View } from '../types';
+import { HomeIcon, BuildingOfficeIcon, BanknotesIcon, WrenchScrewdriverIcon, MegaphoneIcon, ShieldCheckIcon } from './icons';
 
 interface NavigationProps {
     activeView: View;
     setActiveView: (view: View) => void;
 }
 
-const navIcons = {
-    home: '🏠',
-    rooms: '🚪',
-    billing: '💰',
-    maintenance: '🔧'
-};
+const navItems: { view: View, label: string, icon: JSX.Element }[] = [
+    { view: 'home', label: 'Home', icon: <HomeIcon /> },
+    { view: 'rooms', label: 'Rooms', icon: <BuildingOfficeIcon /> },
+    { view: 'billing', label: 'Billing', icon: <BanknotesIcon /> },
+    { view: 'maintenance', label: 'Maintenance', icon: <WrenchScrewdriverIcon /> },
+    { view: 'announcements', label: 'Announcements', icon: <MegaphoneIcon /> },
+    { view: 'audit', label: 'Audit Log', icon: <ShieldCheckIcon /> },
+];
 
 export const Navigation = ({ activeView, setActiveView }: NavigationProps) => {
-    const views: View[] = ['home', 'rooms', 'billing', 'maintenance'];
     return (
         <nav className="main-nav">
             <ul>
-                {views.map(view => (
+                {navItems.map(({ view, label, icon }) => (
                     <li key={view}>
                         <button onClick={() => setActiveView(view)} className={`nav-link ${activeView === view ? 'active' : ''}`}>
-                            <span aria-hidden="true">{navIcons[view]}</span>
-                            <span>{view.charAt(0).toUpperCase() + view.slice(1)}</span>
+                            {icon}
+                            <span>{label}</span>
                              {activeView === view && (
                                 <motion.div className="active-nav-indicator" layoutId="active-nav-indicator" />
                             )}

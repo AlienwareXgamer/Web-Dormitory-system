@@ -28,18 +28,18 @@ export async function generateReportAPI(allTenants: Tenant[], maintenanceRequest
         - Total Capacity: ${TOTAL_ROOMS * MAX_TENANTS_PER_ROOM}
         - Current Tenants: ${totalTenants}
         - Occupancy Rate: ${((totalTenants / (TOTAL_ROOMS * MAX_TENANTS_PER_ROOM)) * 100).toFixed(1)}%
-        - Total Collected Rent This Month: $${totalIncome}
+        - Total Collected Rent This Month: ₱${totalIncome.toLocaleString()}
         - Tenants with outstanding payments: ${tenantsWithDuePayment.length}
-        - Details of tenants with due payments: ${tenantsWithDuePayment.map(t => `${t.name} ($${t.rent})`).join(', ') || 'None'}
+        - Details of tenants with due payments: ${tenantsWithDuePayment.map(t => `${t.name} (₱${t.rent.toLocaleString()})`).join(', ') || 'None'}
         - Open Maintenance Requests: ${openMaintenanceRequests.length}
-        - Details of open requests: ${openMaintenanceRequests.map(r => `Room ${r.roomId}: ${r.description}`).join('; ') || 'None'}
+        - Details of open requests: ${openMaintenanceRequests.map(r => `Room ${r.roomId}: ${r.description} (Priority: ${r.priority}, Assigned to: ${r.assignedTo || 'Unassigned'})`).join('; ') || 'None'}
 
-        Based on the data above, please generate a concise and professional monthly summary report for the dormitory manager.
+        Based on the data above, please generate a concise and professional monthly summary report in PHP currency for the dormitory manager.
         Structure the report with the following sections:
         1.  **Overall Summary**: A brief overview of the key metrics (occupancy, finances).
-        2.  **Financial Status**: Comment on the income and outstanding dues.
-        3.  **Maintenance Report**: Summarize the current maintenance load and mention any critical open issues.
-        4.  **Action Items**: Suggest actions for the manager, like following up with tenants who have due payments and prioritizing urgent maintenance.
+        2.  **Financial Status**: Comment on the income and outstanding dues in PHP.
+        3.  **Maintenance Report**: Summarize the current maintenance load. Mention any high-priority open issues and who they are assigned to.
+        4.  **Action Items**: Suggest actions for the manager, like following up with tenants who have due payments and ensuring high-priority maintenance is addressed.
       `;
 
       try {

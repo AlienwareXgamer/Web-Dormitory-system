@@ -3,52 +3,78 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 import { useState, useEffect, useMemo, useCallback } from 'react';
+import { AnimatePresence } from 'framer-motion';
 import { AdminView } from './components/AdminView';
-import { LoginPage } from './components/LoginPage';
+import { AuthPage } from './components/AuthPage';
+import { AdminLoginPage } from './components/AdminLoginPage';
+import { TenantLoginPage } from './components/TenantLoginPage';
 import { TenantPortal } from './components/TenantPortal';
-import { TOTAL_ROOMS, MAX_TENANTS_PER_ROOM } from './constants';
-import type { Room, Tenant, MaintenanceRequest, MaintenanceStatus, User } from './types';
+import * as api from './api/mockDatabase';
+import type { Room, Tenant, MaintenanceRequest, User, Announcement, AuditLog } from './types';
+
+const AppLoader = () => (
+    <div className="app-loader">
+        <div className="spinner"></div>
+        <p>Loading Dormitory Data...</p>
+    </div>
+);
 
 export default function App() {
   const [rooms, setRooms] = useState<Room[]>([]);
   const [maintenanceRequests, setMaintenanceRequests] = useState<MaintenanceRequest[]>([]);
+  const [announcements, setAnnouncements] = useState<Announcement[]>([]);
+  const [auditLogs, setAuditLogs] = useState<AuditLog[]>([]);
   const [currentUser, setCurrentUser] = useState<User | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [authView, setAuthView] = useState<'main' | 'admin' | 'tenant'>('main');
+  const [theme, setTheme] = useState(() => localStorage.getItem('theme') || 'dark');
 
   useEffect(() => {
-    // Initialize with some mock data for demonstration
-    const initialRooms: Room[] = Array.from({ length: TOTAL_ROOMS }, (_, i) => ({
-      id: i + 1,
-      tenants: [],
-    }));
-     // Pre-populate some tenants for login testing
-    const demoTenant1: Tenant = { id: 'tenant-1', name: 'John Doe', rent: 550, billingStatus: 'Paid', roomId: 1 };
-    const demoTenant2: Tenant = { id: 'tenant-2', name: 'Jane Smith', rent: 550, billingStatus: 'Due', roomId: 1 };
-    const demoTenant3: Tenant = { id: 'tenant-3', name: 'Peter Jones', rent: 600, billingStatus: 'Due', roomId: 3 };
-    initialRooms[0].tenants = [demoTenant1, demoTenant2];
-    initialRooms[2].tenants = [demoTenant3];
+    document.documentElement.setAttribute('data-theme', theme);
+    localStorage.setItem('theme', theme);
+  }, [theme]);
 
-    setRooms(initialRooms);
-    
-    setMaintenanceRequests([
-        { id: `req-1`, roomId: 3, description: 'Leaky faucet in the kitchen sink.', status: 'Reported', reportedDate: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString() },
-        { id: `req-2`, roomId: 8, description: 'Wi-Fi is not working in the common area on this floor.', status: 'In Progress', reportedDate: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000).toISOString() },
-        { id: `req-3`, roomId: 1, description: 'Lightbulb in the main ceiling fixture is out.', status: 'Completed', reportedDate: new Date(Date.now() - 10 * 24 * 60 * 60 * 1000).toISOString() },
-    ]);
+  const handleThemeToggle = () => {
+    setTheme(prevTheme => (prevTheme === 'dark' ? 'light' : 'dark'));
+  };
+
+  const fetchData = useCallback(async () => {
+    try {
+        const [fetchedRooms, fetchedRequests, fetchedAnnouncements, fetchedLogs] = await Promise.all([
+            api.getRooms(),
+            api.getMaintenanceRequests(),
+            api.getAnnouncements(),
+            api.getAuditLogs()
+        ]);
+        setRooms(fetchedRooms);
+        setMaintenanceRequests(fetchedRequests);
+        setAnnouncements(fetchedAnnouncements);
+        setAuditLogs(fetchedLogs);
+    } catch (error) {
+        console.error("Failed to fetch initial data:", error);
+        alert("Could not load application data. Please refresh the page.");
+    } finally {
+        setIsLoading(false);
+    }
   }, []);
+
+  useEffect(() => {
+    fetchData();
+  }, [fetchData]);
   
   const allTenants = useMemo(() => rooms.flatMap(room => room.tenants), [rooms]);
 
-  const handleAdminLogin = (email, password) => {
-    // In a real app, you'd validate against a backend.
-    if (email === 'admin@dorm.com' && password === 'password123') {
+  const handleAdminLogin = async (email, password) => {
+    const success = await api.loginAdmin(email, password);
+    if (success) {
         setCurrentUser({ role: 'admin' });
         return true;
     }
     return false;
   };
 
-  const handleTenantLogin = (name, roomId) => {
-     const tenant = allTenants.find(t => t.name.toLowerCase() === name.toLowerCase().trim() && t.roomId === Number(roomId));
+  const handleTenantLogin = async (name, roomId) => {
+     const tenant = await api.findTenant(name, roomId);
      if (tenant) {
         setCurrentUser({ role: 'tenant', tenant });
         return true;
@@ -58,85 +84,76 @@ export default function App() {
   
   const handleLogout = () => {
     setCurrentUser(null);
+    setAuthView('main');
   };
 
-  const handleAddTenant = useCallback((roomId: number, tenantName: string, rent: number) => {
-    setRooms((prevRooms) =>
-      prevRooms.map((room) => {
-        if (room.id === roomId && room.tenants.length < MAX_TENANTS_PER_ROOM) {
-          const newTenant: Tenant = {
-            id: `tenant-${Date.now()}`,
-            name: tenantName,
-            rent,
-            billingStatus: 'Due',
-            roomId: room.id,
-          };
-          return { ...room, tenants: [...room.tenants, newTenant] };
-        }
-        return room;
-      })
-    );
-  }, []);
+  const handleAddTenant = useCallback(async (roomId: number, tenantName: string, rent: number) => {
+    await api.addTenant(roomId, tenantName, rent);
+    await fetchData();
+  }, [fetchData]);
 
-  const handleRemoveTenant = useCallback((roomId: number, tenantId: string) => {
+  const handleRemoveTenant = useCallback(async (roomId: number, tenantId: string) => {
     if (window.confirm('Are you sure you want to remove this tenant?')) {
-        setRooms((prevRooms) =>
-          prevRooms.map((room) => {
-            if (room.id === roomId) {
-              return {
-                ...room,
-                tenants: room.tenants.filter((tenant) => tenant.id !== tenantId),
-              };
-            }
-            return room;
-          })
-        );
+        const tenantName = allTenants.find(t => t.id === tenantId)?.name || 'Unknown';
+        await api.removeTenant(tenantId, tenantName, roomId);
+        await fetchData();
     }
-  }, []);
+  }, [fetchData, allTenants]);
 
-  const handleToggleBilling = useCallback((roomId: number, tenantId: string) => {
-    setRooms((prevRooms) =>
-      prevRooms.map((room) => {
-        if (room.id === roomId) {
-          return {
-            ...room,
-            tenants: room.tenants.map((tenant) =>
-              tenant.id === tenantId
-                ? { ...tenant, billingStatus: tenant.billingStatus === 'Due' ? 'Paid' : 'Due' }
-                : tenant
-            ),
-          };
-        }
-        return room;
-      })
-    );
-  }, []);
+  const handleToggleBilling = useCallback(async (roomId: number, tenantId: string) => {
+    await api.toggleTenantBilling(tenantId);
+    await fetchData();
+  }, [fetchData]);
 
-  const handleAddRequest = useCallback((roomId: number, description: string) => {
-      const newRequest: MaintenanceRequest = {
-        id: `req-${Date.now()}`,
-        roomId,
-        description,
-        status: 'Reported',
-        reportedDate: new Date().toISOString(),
-      };
-      setMaintenanceRequests(prev => [...prev, newRequest].sort((a,b) => new Date(b.reportedDate).getTime() - new Date(a.reportedDate).getTime()));
+  const handleAddRequest = useCallback(async (roomId: number, description: string) => {
+      await api.addMaintenanceRequest(roomId, description);
+      await fetchData();
       alert('Maintenance request submitted successfully!');
-  }, []);
+  }, [fetchData]);
 
-  const handleUpdateStatus = useCallback((requestId: string, status: MaintenanceStatus) => {
-      setMaintenanceRequests(prev => prev.map(req => 
-        req.id === requestId ? { ...req, status } : req
-      ));
-  }, []);
+  const handleUpdateRequest = useCallback(async (requestId: string, updates: Partial<Omit<MaintenanceRequest, 'id' | 'roomId' | 'reportedDate'>>) => {
+      await api.updateMaintenanceRequest(requestId, updates);
+      await fetchData();
+  }, [fetchData]);
   
+  const handleAddAnnouncement = useCallback(async(title: string, content: string) => {
+      await api.createAnnouncement(title, content);
+      await fetchData();
+  }, [fetchData]);
+
+  const handleDeleteAnnouncement = useCallback(async(id: string) => {
+      if (window.confirm('Are you sure you want to delete this announcement?')) {
+          await api.deleteAnnouncement(id);
+          await fetchData();
+      }
+  }, [fetchData]);
+
   const renderContent = () => {
+    if (isLoading) {
+        return <AppLoader />;
+    }
+
     if (!currentUser) {
       return (
-          <LoginPage 
-              onAdminLogin={handleAdminLogin}
-              onTenantLogin={handleTenantLogin}
-          />
+          <AnimatePresence mode="wait">
+            {authView === 'main' && (
+                <AuthPage key="auth-main" onSelectRole={setAuthView} />
+            )}
+            {authView === 'admin' && (
+                <AdminLoginPage 
+                    key="auth-admin"
+                    onAdminLogin={handleAdminLogin} 
+                    onBack={() => setAuthView('main')} 
+                />
+            )}
+            {authView === 'tenant' && (
+                <TenantLoginPage 
+                    key="auth-tenant"
+                    onTenantLogin={handleTenantLogin} 
+                    onBack={() => setAuthView('main')} 
+                />
+            )}
+        </AnimatePresence>
       );
     }
   
@@ -146,12 +163,18 @@ export default function App() {
               rooms={rooms}
               maintenanceRequests={maintenanceRequests}
               allTenants={allTenants}
+              announcements={announcements}
+              auditLogs={auditLogs}
               onAddTenant={handleAddTenant}
               onRemoveTenant={handleRemoveTenant}
               onToggleBilling={handleToggleBilling}
               onAddRequest={handleAddRequest}
-              onUpdateStatus={handleUpdateStatus}
+              onUpdateRequest={handleUpdateRequest}
+              onAddAnnouncement={handleAddAnnouncement}
+              onDeleteAnnouncement={handleDeleteAnnouncement}
               onLogout={handleLogout}
+              theme={theme}
+              onThemeToggle={handleThemeToggle}
           />
        );
     }
@@ -161,8 +184,11 @@ export default function App() {
           <TenantPortal
               user={currentUser}
               requests={maintenanceRequests.filter(r => r.roomId === currentUser.tenant.roomId)}
+              announcements={announcements}
               onAddRequest={handleAddRequest}
               onLogout={handleLogout}
+              theme={theme}
+              onThemeToggle={handleThemeToggle}
           />
       );
     }

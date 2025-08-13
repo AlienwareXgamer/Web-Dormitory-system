@@ -4,6 +4,7 @@
  */
 import { motion, Variants } from 'framer-motion';
 import { CircularProgress } from './CircularProgress';
+import { UserGroupIcon, WrenchScrewdriverIcon, BanknotesIcon, CheckCircleIcon, ExclamationTriangleIcon, BuildingOfficeIcon } from './icons';
 
 const cardVariants: Variants = {
   hidden: { opacity: 0, y: 20 },
@@ -23,11 +24,13 @@ const MetricCard = ({ title, value, icon, className = '', index }) => (
         custom={index}
         variants={cardVariants}
         className={`metric-card ${className}`}
-        whileHover={{ scale: 1.03, zIndex: 2 }}
+        whileHover={{ scale: 1.03, y: -5, zIndex: 2 }}
         transition={{ type: 'spring', stiffness: 400, damping: 15 }}
     >
-        <div className="metric-card-icon" aria-hidden="true">{icon}</div>
-        <h3 className="metric-card-title">{title}</h3>
+        <div className="metric-card-header">
+          <div className="metric-card-icon">{icon}</div>
+          <h3 className="metric-card-title">{title}</h3>
+        </div>
         <p className={`metric-card-value ${className}`}>{value}</p>
     </motion.div>
 );
@@ -35,11 +38,11 @@ const MetricCard = ({ title, value, icon, className = '', index }) => (
 
 export const Dashboard = ({ stats }) => {
     const metrics = [
-        { title: 'Total Tenants', value: stats.totalTenants, icon: '👥', index: 1 },
-        { title: 'Open Maintenance', value: stats.openMaintenanceRequests, icon: '🔧', className: stats.openMaintenanceRequests > 0 ? 'warning' : '', index: 2 },
-        { title: 'Potential Revenue', value: `$${stats.totalMonthlyRevenue.toLocaleString()}`, icon: '📈', index: 3 },
-        { title: 'Collected This Month', value: `$${stats.collectedRent.toLocaleString()}`, icon: '✅', className: 'success', index: 4 },
-        { title: 'Outstanding Dues', value: `$${stats.outstandingDues.toLocaleString()}`, icon: '❗', className: 'error', index: 5 }
+        { title: 'Total Tenants', value: stats.totalTenants, icon: <UserGroupIcon />, index: 1 },
+        { title: 'Open Maintenance', value: stats.openMaintenanceRequests, icon: <WrenchScrewdriverIcon />, className: stats.openMaintenanceRequests > 0 ? 'warning' : '', index: 2 },
+        { title: 'Potential Revenue', value: `₱${stats.totalMonthlyRevenue.toLocaleString()}`, icon: <BanknotesIcon />, index: 3 },
+        { title: 'Collected This Month', value: `₱${stats.collectedRent.toLocaleString()}`, icon: <CheckCircleIcon />, className: 'success', index: 4 },
+        { title: 'Outstanding Dues', value: `₱${stats.outstandingDues.toLocaleString()}`, icon: <ExclamationTriangleIcon />, className: 'error', index: 5 }
     ];
 
     return (
@@ -56,10 +59,13 @@ export const Dashboard = ({ stats }) => {
                 custom={0}
                 variants={cardVariants}
                 className="metric-card occupancy-card"
-                whileHover={{ scale: 1.03, zIndex: 2 }}
+                whileHover={{ scale: 1.03, y: -5, zIndex: 2 }}
                 transition={{ type: 'spring', stiffness: 400, damping: 15 }}
             >
-                 <h3 className="metric-card-title">Total Occupancy</h3>
+                 <div className="metric-card-header">
+                    <div className="metric-card-icon"><BuildingOfficeIcon /></div>
+                    <h3 className="metric-card-title">Total Occupancy</h3>
+                 </div>
                  <CircularProgress percentage={stats.occupancyPercentage} />
             </motion.div>
             

@@ -26,21 +26,30 @@ const modalVariants: Variants = {
 interface AddRequestModalProps {
     rooms: Room[];
     onClose: () => void;
-    onSubmit: (roomId: number, description: string) => void;
+    onSubmit: (roomId: number, description: string) => Promise<void>;
 }
 
 export const AddRequestModal = ({ rooms, onClose, onSubmit }: AddRequestModalProps) => {
   const [description, setDescription] = useState('');
   const [roomId, setRoomId] = useState(rooms[0]?.id || '');
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     if (!description || !roomId) {
       alert('Please fill all fields.');
       return;
     }
-    onSubmit(Number(roomId), description);
-    onClose();
+    setIsSubmitting(true);
+    try {
+        await onSubmit(Number(roomId), description);
+        onClose();
+    } catch(error) {
+        console.error("Failed to submit request:", error);
+        alert('An error occurred while submitting the request. Please try again.');
+    } finally {
+        setIsSubmitting(false);
+    }
   };
 
   return (
@@ -62,7 +71,7 @@ export const AddRequestModal = ({ rooms, onClose, onSubmit }: AddRequestModalPro
           <h2 id="modal-title" className="sr-only">Report Maintenance Issue Form</h2>
           <div className="form-group">
             <label htmlFor="room-select-request">Room Number</label>
-            <select id="room-select-request" value={roomId} onChange={(e) => setRoomId(e.target.value)} required>
+            <select id="room-select-request" value={roomId} onChange={(e) => setRoomId(e.target.value)} required disabled={isSubmitting}>
               {rooms.map((room) => (
                 <option key={room.id} value={room.id}>
                   Room {room.id}
@@ -79,6 +88,7 @@ export const AddRequestModal = ({ rooms, onClose, onSubmit }: AddRequestModalPro
               onChange={(e) => setDescription(e.target.value)}
               placeholder="e.g., Leaky faucet in the bathroom."
               required
+              disabled={isSubmitting}
             />
           </div>
           <div className="form-actions">
@@ -88,6 +98,7 @@ export const AddRequestModal = ({ rooms, onClose, onSubmit }: AddRequestModalPro
               onClick={onClose}
               whileHover={{ scale: 1.05 }}
               whileTap={{ scale: 0.95 }}
+              disabled={isSubmitting}
             >
               Cancel
             </motion.button>
@@ -96,8 +107,9 @@ export const AddRequestModal = ({ rooms, onClose, onSubmit }: AddRequestModalPro
               className="btn-primary"
               whileHover={{ scale: 1.05 }}
               whileTap={{ scale: 0.95 }}
+              disabled={isSubmitting}
             >
-              Submit Request
+              {isSubmitting ? 'Submitting...' : 'Submit Request'}
             </motion.button>
           </div>
         </form>
