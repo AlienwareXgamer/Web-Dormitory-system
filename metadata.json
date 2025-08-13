@@ -1,5 +1,5 @@
 {
-  "name": " React TRIAL",
-  "description": " React app using Gemini",
+  "name": "Dormitory Management System",
+  "description": "A React app to manage dormitory tenants, billing, and occupancy, with AI-powered reporting.",
   "requestFramePermissions": []
 }
